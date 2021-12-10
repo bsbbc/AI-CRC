@@ -139,12 +139,87 @@ def dirChange(dirIndex):
         dirIndex = 3
     return dirIndex
 
+#방향이 북쪽으로 이 함수 시작
+def searchNonClean(currentX, currentY):
+    # west
+    dirIndex = 3
+    MoveLeft()
+    tempX = currentX - 1
+    tempY = currentY
+    cntDist = 1
+    while wholeMap[tempX][tempY] != 1:
+        if wholeMap[tempX][tempY] == 0:
+            wholeMap[tempX][tempY] = 2
+            for i in range(cntDist):
+                MoveFront()
+                pass
+            print('')  
+            for item in wholeMap:
+                print(item)    
+            return 'again', tempX, tempY, dirIndex
+        tempX = tempX - 1
+        cntDist = cntDist + 1
+        
+    # south
+    dirIndex = 2
+    MoveLeft()
+    tempX = currentX
+    tempY = currentY - 1
+    cntDist = 1
+    while wholeMap[tempX][tempY] != 1:
+        if wholeMap[tempX][tempY] == 0:
+            wholeMap[tempX][tempY] = 2
+            for i in range(cntDist):
+                MoveFront()
+                pass
+            print('')  
+            for item in wholeMap:
+                print(item)            
+            return 'again', tempX, tempY, dirIndex
+        tempY = tempY - 1
+        cntDist = cntDist + 1
 
+    # north
+    dirIndex = 0
+    MoveLeft()
+    MoveLeft()
+    tempX = currentX
+    tempY = currentY + 1
+    cntDist = 1
+    while wholeMap[tempX][tempY] != 1:
+        if wholeMap[tempX][tempY] == 0:
+            wholeMap[tempX][tempY] = 2
+            for i in range(cntDist):
+                MoveFront()
+                pass
+            print('')  
+            for item in wholeMap:
+                print(item)    
+            return 'again', tempX, tempY, dirIndex
+        tempY = tempY + 1
+        cntDist = cntDist + 1
 
+    # east
+    dirIndex = 1
+    MoveRight()
+    tempX = currentX + 1
+    tempY = currentY
+    cntDist = 1
+    while wholeMap[tempX][tempY] != 1:
+        if wholeMap[tempX][tempY] == 0:
+            wholeMap[tempX][tempY] = 2
+            for i in range(cntDist):
+                MoveFront()
+                pass
+            print('')  
+            for item in wholeMap:
+                print(item)    
+            return 'again', tempX, tempY, dirIndex
+        tempX = tempX + 1
+        cntDist = cntDist + 1
+    
 
-
-
-
+    return 'done', tempX, tempY
 
 #CM(control mode), CA(control auto)
 MODE = 'CM'
@@ -202,10 +277,6 @@ def main():
             wholeMap[item[0]][item[1]] = 1
 
 
-        
-
-
-
     #CONTROL Mode
     while (MODE is 'CM'):
         if (CLEANER == 'P1'):
@@ -218,4 +289,13 @@ def main():
 
 
 
-
+outList = [[3,0],[3,3],[3,2],[0,3],[1,3],[2,3],[0,4],[0,5],[0,6],[0,7],[1,7],[2,7],[3,7],[4,7],[5,7],[6,7],[6,6],[6,5],[6,4],[6,3],[6,2],[6,1],[6,0],[4,0],[5,0],[3,1]]
+wholeMap = [[0 for col in range(8)] for row in range(7)]
+for item in outList:
+    wholeMap[item[0]][item[1]] = 1
+wholeMap[4][1] = 2
+A = 4
+B = 1
+testChar = 'again'
+while (testChar != 'done'):
+    testChar, A, B, dirIndex = searchNonClean(A, B)
