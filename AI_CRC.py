@@ -1,20 +1,51 @@
 import RPi.GPIO as GPIO
 import time
+import socket
+import time
+import os, sys
 
-#version 9.0
+#version f
+
+#socket setting
+HOST = '172.20.10.12'
+PORT = 9999
+crc = ''
+
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+server_socket.bind((HOST, PORT))
+
+server_socket.listen()
+
+client_socket, addr=server_socket.accept()
+
+print('Connected by', addr)
+
+# restart preparation
+executable = sys.executable
+args = sys.argv[:]
+args.insert(0, executable)
 
 #GPIO setting
 MOTER_A1 = 5
-MOTER_A2 = 6
-MOTER_B1 = 20
-MOTER_B2 = 21
-CLEAN_MOTER = 13
+MOTER_A2 = 13
+MOTER_B1 = 14
+MOTER_B2 = 15
+CLEAN_MOTER = 6
+LEFT_SENSOR = 11
+RIGHT_SENSOR = 9
+FRONT_SENSOR = 10
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(MOTER_A1,GPIO.OUT)
 GPIO.setup(MOTER_A2,GPIO.OUT)
 GPIO.setup(MOTER_B1,GPIO.OUT)
 GPIO.setup(MOTER_B2,GPIO.OUT)
 GPIO.setup(CLEAN_MOTER, GPIO.OUT) # GPIO Assign mode
+GPIO.setup(LEFT_SENSOR, GPIO.IN)
+GPIO.setup(RIGHT_SENSOR, GPIO.IN)
+GPIO.setup(FRONT_SENSOR, GPIO.IN)
 
 #RightBack
 RB = GPIO.PWM(MOTER_A1, 50)
@@ -25,56 +56,50 @@ LB = GPIO.PWM(MOTER_B1, 50)
 #LeftFront
 LF = GPIO.PWM(MOTER_B2, 50)
 
+
+
 def MoveForward():
-   LF.start(0)
-   RF.start(0)
-   LF.ChangeDutyCycle(25)
-   RF.ChangeDutyCycle(25)
-   time.sleep(2)
-   LF.stop()
-   RF.stop()
+    GPIO.output(MOTER_A2, True)
+    GPIO.output(MOTER_B2, True)
+    time.sleep(0.3)
+    GPIO.output(MOTER_A2, False)
+    GPIO.output(MOTER_B2, False)
+    time.sleep(1)
 
 def MoveBackWard():
-   RB.start(0)
-   LB.start(0)
-   LB.ChangeDutyCycle(23)
-   RB.ChangeDutyCycle(28)
-   time.sleep(2)
-   LB.stop()
-   RB.stop()
-
+    GPIO.output(MOTER_A1, True)
+    GPIO.output(MOTER_B1, True)
+    time.sleep(0.3)
+    GPIO.output(MOTER_A1, False)
+    GPIO.output(MOTER_B1, False)
+    time.sleep(1)
+    
 def MoveRight():
-   LF.start(0)
-   RB.start(0)
-   LF.ChangeDutyCycle(24)
-   RB.ChangeDutyCycle(25)
-   time.sleep(1)
-   LF.stop()
-   RB.stop()
-
+    GPIO.output(MOTER_A1, True)
+    GPIO.output(MOTER_B2, True)
+    time.sleep(0.3)
+    GPIO.output(MOTER_A1, False)
+    GPIO.output(MOTER_B2, False)
+    time.sleep(1)
+    
 def MoveLeft():
-   LB.start(0)
-   RF.start(0)
-   LB.ChangeDutyCycle(24)
-   RF.ChangeDutyCycle(25)
-   time.sleep(1)
-   LB.stop()
-   RF.stop()
+    GPIO.output(MOTER_A2, True)
+    GPIO.output(MOTER_B1, True)
+    time.sleep(0.3)
+    GPIO.output(MOTER_A2, False)
+    GPIO.output(MOTER_B1, False)
+    time.sleep(1)
+#GPIO.cleanup()
 
-GPIO.cleanup()
-
-#===========================SLAM============================
+#========================================SLAM===============================================
 
 wholeMap = []
 directionList = ['north','east','south','west']
-
 nsList = [0]
 ewList = [0]
-
 #x,y coordinate
 outerList = []
 innerList = []
-
 
 #analyzing the whole map
 def FindBoundary(dir,prevSt,x,y):
@@ -139,7 +164,7 @@ def dirChange(dirIndex):
         dirIndex = 3
     return dirIndex
 
-#방향이 북쪽으로 이 함수 시작
+#direction must be north at first
 def searchNonClean(currentX, currentY):
     # west
     dirIndex = 3
@@ -151,8 +176,7 @@ def searchNonClean(currentX, currentY):
         if wholeMap[tempX][tempY] == 0:
             wholeMap[tempX][tempY] = 2
             for i in range(cntDist):
-                MoveFront()
-                pass
+                MoveForward()
             print('')  
             for item in wholeMap:
                 print(item)    
@@ -170,8 +194,7 @@ def searchNonClean(currentX, currentY):
         if wholeMap[tempX][tempY] == 0:
             wholeMap[tempX][tempY] = 2
             for i in range(cntDist):
-                MoveFront()
-                pass
+                MoveForward()
             print('')  
             for item in wholeMap:
                 print(item)            
@@ -190,8 +213,7 @@ def searchNonClean(currentX, currentY):
         if wholeMap[tempX][tempY] == 0:
             wholeMap[tempX][tempY] = 2
             for i in range(cntDist):
-                MoveFront()
-                pass
+                MoveForward()
             print('')  
             for item in wholeMap:
                 print(item)    
@@ -209,8 +231,7 @@ def searchNonClean(currentX, currentY):
         if wholeMap[tempX][tempY] == 0:
             wholeMap[tempX][tempY] = 2
             for i in range(cntDist):
-                MoveFront()
-                pass
+                MoveForward()
             print('')  
             for item in wholeMap:
                 print(item)    
@@ -221,11 +242,11 @@ def searchNonClean(currentX, currentY):
 
     return 'done', tempX, tempY
 
-#CM(control mode), CA(control auto)
-MODE = 'CM'
 
-def main():
-    #AUTO Mode
+#AUTO Mode
+def auto(crc):
+
+
     dirIndex = 0
     dir = directionList[dirIndex]
     xCnt = 0
@@ -233,9 +254,29 @@ def main():
     x = 1
     y = 1
     prevSt = 'None'
-    while (MODE is 'CA'):
+
+    while (crc == 'CA'):
         GPIO.output(CLEAN_MOTER, 1) # on
-        while (bottom is True):
+        while (True):
+
+            Left = False
+            Right = False
+            Front = False
+
+            if GPIO.input(LEFT_SENSOR):
+                print("left something")
+                Left = True
+            elif GPIO.input(RIGHT_SENSOR):
+                print("right something")
+                Right = True
+            elif GPIO.input(FRONT_SENSOR):
+                print("right something")
+                Front = True
+            else:
+                print("unknown")
+            time.sleep(0.2)
+
+            #detect obstacle & slam
             if (Left is True):
                 prevSt = 'L'
                 MoveForward()
@@ -272,30 +313,75 @@ def main():
             
             if (innerList == [1,1]):
                 break
+
+        #direction to north
+        if (dirIndex == 1):
+            MoveLeft()
+        elif (dirIndex == 2):
+            MoveLeft()
+            MoveLeft()
+        elif (dirIndex == 3):
+            MoveRight()
+        
+        #SLAM FINISHED
         wholeMap = CntMapSize()
         for item in outerList:
             wholeMap[item[0]][item[1]] = 1
+        
+        #start cleaning
+        continueYn = 'again'
+        while (continueYn != 'done'):
+            continueYn, A, B, dirIndex = searchNonClean(A, B)
+            if (dirIndex == 1):
+                MoveLeft()
+            elif (dirIndex == 2):
+                MoveLeft()
+                MoveLeft()
+            elif (dirIndex == 3):
+                MoveRight()        
 
+#===========================MODE SELECTION=============================================
 
-    #CONTROL Mode
-    while (MODE is 'CM'):
-        if (CLEANER == 'P1'):
-            GPIO.output(CLEAN_MOTER, 1) # on
-        elif(CLEANER == 'P0'):
-            GPIO.output(CLEAN_MOTER, 0) # off
+while True:
+    data = None
+    data = client_socket.recv(1024)
+
+    if not data :
         break
-       #get motor speed from the device
-       
+    
+    print('Recived from', addr)
+    print('Data : ', data.decode())
+
+    crc = data.decode()
+    #client_socket.sendall(data)
+    
+    #청소기 동작/취소 명령어 실행
+
+    if crc == 'P0':
+        print('come')
+        GPIO.output(CLEAN_MOTER, 1)
+        os.execvp(executable, args) # 재실행
+    elif crc == 'P1' :
+        GPIO.output(CLEAN_MOTER, 0)
+        os.execvp(executable, args)
+    elif crc == "GO" :
+        print("1")
+        MoveForward()
+    elif crc == "BACK" :
+        MoveBackWard()
+    elif crc == "L" :
+        MoveLeft()
+    elif crc == "R" :
+        MoveRight()
+    elif crc == 'CA':
+        auto(crc)
+    elif crc == 'CM':
+        GPIO.cleanup()
+        os.execvp(executable, args)
+    os.execvp(executable, args)
 
 
 
-outList = [[3,0],[3,3],[3,2],[0,3],[1,3],[2,3],[0,4],[0,5],[0,6],[0,7],[1,7],[2,7],[3,7],[4,7],[5,7],[6,7],[6,6],[6,5],[6,4],[6,3],[6,2],[6,1],[6,0],[4,0],[5,0],[3,1]]
-wholeMap = [[0 for col in range(8)] for row in range(7)]
-for item in outList:
-    wholeMap[item[0]][item[1]] = 1
-wholeMap[4][1] = 2
-A = 4
-B = 1
-testChar = 'again'
-while (testChar != 'done'):
-    testChar, A, B, dirIndex = searchNonClean(A, B)
+
+
+
